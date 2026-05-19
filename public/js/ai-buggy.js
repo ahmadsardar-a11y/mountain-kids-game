@@ -332,22 +332,32 @@ const AIBuggy = (function () {
 
         // Obstacle collision + reactive re-targeting
         let collisionThisFrame = false;
+        let collidedObs = null;
         if (getObstacleData && getObstacleData.length > 0) {
             for (let obs of getObstacleData) {
                 let dx = position.x - obs.x;
                 let dz = position.z - obs.z;
                 let dist = Math.sqrt(dx * dx + dz * dz);
                 if (dist < obs.radius + BUGGY_RADIUS && dist > 0.001) {
-                    let push = (obs.radius + BUGGY_RADIUS - dist) / dist;
-                    position.x += dx * push;
-                    position.z += dz * push;
-                    velocity *= 0.5;
+                    // Strong push: guarantee at least 1 unit clearance
+                    let minClear = obs.radius + BUGGY_RADIUS + 1.0;
+                    let pushDist = minClear - dist;
+                    let pushFactor = pushDist / dist;
+                    position.x += dx * pushFactor;
+                    position.z += dz * pushFactor;
+                    // Forward burst away from obstacle
+                    let awayAngle = Math.atan2(dx, dz);
+                    heading = awayAngle;
+                    velocity = maxSpeed * 0.5;
+                    stuckTimer = 0;
+                    reverseTimer = 0;
                     collisionThisFrame = true;
+                    collidedObs = obs;
                 }
             }
         }
 
-        // If hit obstacle, pick a different gem target so we don't keep ramming same tree
+        // If hit obstacle, pick a different gem target AND re-point heading away from it
         if (collisionThisFrame && targetGem) {
             let oldTarget = targetGem;
             targetGem = pickTargetGem();
@@ -361,6 +371,12 @@ const AIBuggy = (function () {
                         }
                     }
                 }
+            }
+            // Immediately re-point toward new target
+            if (targetGem) {
+                let dx = targetGem.x - position.x;
+                let dz = targetGem.z - position.z;
+                heading = Math.atan2(dx, dz);
             }
         }
 
