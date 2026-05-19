@@ -15,7 +15,7 @@ const World = (function () {
     const GEM_COLLECT_RADIUS = 3.5;
     const GEM_MIN_SPACING = 12;
     const BOMB_TRIGGER_RADIUS = 3.5;
-    const ZOMBIE_COLLIDE_RADIUS = 15.0;
+    const ZOMBIE_COLLIDE_RADIUS = 7.0;
     const LAVA_COLLIDE_RADIUS = 5.0;
     const SPIN_DURATION = 3.0;
     const RAMP_COUNT = 3;
@@ -326,6 +326,8 @@ const World = (function () {
 
             zombieData.push({
                 x, y, z,
+                spawnX: x, spawnZ: z,
+                patrolRadius: 25 + Math.random() * 20,
                 mesh,
                 heading: Math.random() * Math.PI * 2,
                 speed: 1.5 + Math.random() * 1.5,
@@ -449,8 +451,9 @@ const World = (function () {
         rampGroup.name = 'ramps';
         rampData = [];
 
-        const rampMat = new THREE.MeshLambertMaterial({ color: 0x8B7355, flatShading: true });
+        const rampMat = new THREE.MeshLambertMaterial({ color: 0xFF6600, flatShading: true });
         const rampGeo = new THREE.BoxGeometry(6.0, 0.6, 12.0);
+        const stripeMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
 
         for (let i = 0; i < RAMP_COUNT; i++) {
             let x, z, y;
@@ -468,6 +471,13 @@ const World = (function () {
             mesh.rotation.x = -tiltAngle;
             mesh.position.set(x, y + 1.2, z);
             rampGroup.add(mesh);
+
+            // Yellow stripe on ramp
+            const stripeGeo = new THREE.BoxGeometry(0.8, 0.62, 10.0);
+            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+            stripe.rotation.x = -tiltAngle;
+            stripe.position.set(x, y + 1.2, z);
+            rampGroup.add(stripe);
 
             // Calculate ramp end position (high end) for gem placement
             const rampLen = 12.0;
@@ -599,7 +609,24 @@ const World = (function () {
         return new THREE.Fog(0x87CEEB, 60, 180);
     }
 
-    // ── Public API ──
+    // ── Ramp collision ──
+    function getRampHeight(x, z) {
+        let bestHeight = -999;
+        for (let r of rampData) {
+            // Check if point is within ramp bounds (roughly)
+            let dx = x - r.x;
+            let dz = z - r.z;
+            let dist = Math.sqrt(dx*dx + dz*dz);
+            if (dist < 6.0) {
+                // Estimate ramp surface height at this position
+                let forwardZ = -Math.cos(r.tiltAngle); // ramp faces -Z when tilted
+                let alongRamp = dz * forwardZ;
+                let rampSurfaceY = r.y + Math.sin(r.tiltAngle) * alongRamp;
+                if (rampSurfaceY > bestHeight) bestHeight = rampSurfaceY;
+            }
+        }
+        return bestHeight;
+    }
     function init(targetScene) {
         scene = targetScene;
         scene.fog = createFog();
@@ -659,7 +686,21 @@ const World = (function () {
             z.x += Math.sin(z.heading) * z.speed * dt;
             z.z += Math.cos(z.heading) * z.speed * dt;
 
-            // Boundary bounce
+            // Patrol radius: turn back toward spawn if too far
+            let dx = z.x - z.spawnX;
+            let dz = z.z - z.spawnZ;
+            let distFromSpawn = Math.sqrt(dx*dx + dz*dz);
+            if (distFromSpawn > z.patrolRadius) {
+                let angleToSpawn = Math.atan2(-dx, -dz);
+                let angleDiff = angleToSpawn - z.heading;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                z.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), 2.0 * dt);
+                z.x = z.spawnX + (dx / distFromSpawn) * z.patrolRadius;
+                z.z = z.spawnZ + (dz / distFromSpawn) * z.patrolRadius;
+            }
+
+            // Map boundary bounce
             if (z.x > MAP_HALF || z.x < -MAP_HALF) {
                 z.heading = Math.PI - z.heading;
                 z.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, z.x));
@@ -669,8 +710,8 @@ const World = (function () {
                 z.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, z.z));
             }
 
-            // Random heading change
-            if (Math.random() < 0.02) {
+            // Random heading change (less frequent now)
+            if (Math.random() < 0.015) {
                 z.heading += (Math.random() - 0.5) * 1.5;
             }
 
@@ -939,6 +980,7 @@ const World = (function () {
     return {
         init,
         update,
+        getRampHeight,
         getTerrainHeight,
         getSlope,
         checkGemCollection,

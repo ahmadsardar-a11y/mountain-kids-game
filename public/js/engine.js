@@ -191,7 +191,7 @@ const Engine = (function () {
             let braking = Input.isBraking();
 
             // Player Buggy physics
-            let speedRatio = Buggy.update(dt, World.getTerrainHeight, throttle, steering, braking, World.getObstacleData());
+            let speedRatio = Buggy.update(dt, World.getTerrainHeight, throttle, steering, braking, World.getObstacleData(), World.getRampHeight);
             GameAudio.updateEngine(Math.abs(speedRatio));
 
             // Air time detection

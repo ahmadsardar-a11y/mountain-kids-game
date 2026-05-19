@@ -174,7 +174,7 @@ const Buggy = (function () {
     }
 
     // ── Physics Update ──
-    function update(dt, getTerrainHeight, throttle, steering, braking, obstacleData) {
+    function update(dt, getTerrainHeight, throttle, steering, braking, obstacleData, getRampHeight) {
         // Spin state
         if (spinTimer > 0) {
             spinTimer -= dt;
@@ -185,7 +185,9 @@ const Buggy = (function () {
             mesh.rotation.z = Math.cos(Date.now() * 0.025) * 0.2;
 
             let groundY = getTerrainHeight(position.x, position.z);
-            position.y = groundY + GROUND_CLEARANCE;
+            let rampY = getRampHeight ? getRampHeight(position.x, position.z) : -999;
+            let finalY = Math.max(groundY, rampY);
+            position.y = finalY + GROUND_CLEARANCE;
             mesh.position.copy(position);
 
             if (spinTimer <= 0) {
@@ -261,9 +263,11 @@ const Buggy = (function () {
             }
         }
 
-        // Ground clamping
+        // Ground clamping (use ramp height if on ramp)
         let groundY = getTerrainHeight(position.x, position.z);
-        position.y = groundY + GROUND_CLEARANCE;
+        let rampY = getRampHeight ? getRampHeight(position.x, position.z) : -999;
+        let finalY = Math.max(groundY, rampY);
+        position.y = finalY + GROUND_CLEARANCE;
 
         // Apply to mesh
         mesh.position.copy(position);

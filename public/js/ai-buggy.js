@@ -16,6 +16,11 @@ const AIBuggy = (function () {
     const GEM_COLLECT_RADIUS = 3.5;
     const IDLE_CHANCE = 0.2;
 
+    // ── Stuck detection ──
+    let stuckTimer = 0;
+    let lastPosition = new THREE.Vector3(0, 0, 0);
+    let reverseTimer = 0;
+
     // ── State ──
     let mesh = null;
     let wheels = [];
@@ -187,6 +192,39 @@ const AIBuggy = (function () {
             targetGem = pickTargetGem();
         }
 
+        // ── Stuck detection & recovery ──
+        let moveDist = position.distanceTo(lastPosition);
+        if (moveDist < 0.3) {
+            stuckTimer += dt;
+        } else {
+            stuckTimer = 0;
+        }
+        lastPosition.copy(position);
+
+        if (reverseTimer > 0) {
+            reverseTimer -= dt;
+            // Reverse hard and turn
+            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 2;
+            heading += turn;
+            velocity = -maxSpeed * 0.5;
+            let forwardX = Math.sin(heading);
+            let forwardZ = Math.cos(heading);
+            position.x += forwardX * velocity * dt;
+            position.z += forwardZ * velocity * dt;
+            position.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.x));
+            position.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.z));
+            let groundY = getTerrainHeight(position.x, position.z);
+            position.y = groundY + GROUND_CLEARANCE;
+            mesh.position.copy(position);
+            mesh.rotation.y = heading;
+            return Math.abs(velocity) / maxSpeed;
+        }
+
+        if (stuckTimer > 2.0) {
+            reverseTimer = 1.5;
+            stuckTimer = 0;
+        }
+
         // Easy mode: idle chance
         if (difficulty === 'easy') {
             if (idleTimer > 0) {
@@ -207,9 +245,26 @@ const AIBuggy = (function () {
             }
         }
 
-        // AI steering toward target
+        // AI steering toward target + obstacle avoidance
         let throttle = 0;
         let steering = 0;
+        let avoidX = 0;
+        let avoidZ = 0;
+
+        // Obstacle avoidance
+        if (getObstacleData && getObstacleData.length > 0) {
+            for (let obs of getObstacleData) {
+                let dx = position.x - obs.x;
+                let dz = position.z - obs.z;
+                let dist = Math.sqrt(dx*dx + dz*dz);
+                let avoidRadius = obs.radius + BUGGY_RADIUS + 5.0;
+                if (dist < avoidRadius && dist > 0.001) {
+                    let strength = (avoidRadius - dist) / avoidRadius;
+                    avoidX += (dx / dist) * strength * 2.0;
+                    avoidZ += (dz / dist) * strength * 2.0;
+                }
+            }
+        }
 
         if (targetGem) {
             let dx = targetGem.x - position.x;
@@ -217,22 +272,26 @@ const AIBuggy = (function () {
             let dist = Math.sqrt(dx*dx + dz*dz);
             let targetHeading = Math.atan2(dx, dz);
 
-            // Normalize angle difference to -PI..PI
-            let angleDiff = targetHeading - heading;
+            // Blend target seeking with obstacle avoidance
+            let seekX = Math.sin(targetHeading);
+            let seekZ = Math.cos(targetHeading);
+            let blend = Math.min(1.0, Math.sqrt(avoidX*avoidX + avoidZ*avoidZ));
+            let finalX = seekX * (1 - blend) + avoidX * blend;
+            let finalZ = seekZ * (1 - blend) + avoidZ * blend;
+
+            let finalHeading = Math.atan2(finalX, finalZ);
+            let angleDiff = finalHeading - heading;
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-            // More precise steering when close to gem
             let steerFactor = dist < 6 ? 3.5 : 2.0;
             steering = Math.max(-1, Math.min(1, angleDiff * steerFactor));
             throttle = 1.0;
 
-            // Slow down when close to target
             if (dist < 8) throttle = 0.6;
             if (dist < 4) throttle = 0.3;
-            if (dist < 2.5) throttle = 0.15; // crawl when very close
+            if (dist < 2.5) throttle = 0.15;
         } else {
-            // No gems left - cruise slowly
             throttle = 0.3;
             steering = Math.sin(Date.now() * 0.001) * 0.5;
         }
