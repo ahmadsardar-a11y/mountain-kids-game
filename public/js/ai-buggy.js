@@ -191,14 +191,31 @@ const AIBuggy = (function () {
         if (!targetGem || targetGem.collected) {
             targetGem = pickTargetGem();
         }
-        // Re-pick every 5 seconds to avoid stuck chasing one gem
+        // Re-pick every ~5 seconds or when stuck
         if (Math.random() < 0.005) {
             targetGem = pickTargetGem();
         }
 
+        // ── Edge-of-map recovery ──
+        let atEdgeX = position.x <= -MAP_HALF + 2 || position.x >= MAP_HALF - 2;
+        let atEdgeZ = position.z <= -MAP_HALF + 2 || position.z >= MAP_HALF - 2;
+        if ((atEdgeX || atEdgeZ) && Math.abs(velocity) < 3) {
+            // Point directly toward map center and boost forward
+            heading = Math.atan2(-position.x, -position.z);
+            velocity = maxSpeed * 0.8;
+            stuckTimer = 0;
+            reverseTimer = 0;
+            // Give it breathing room: temporarily push 2 units inward
+            let toCenterX = -position.x;
+            let toCenterZ = -position.z;
+            let toCenterLen = Math.sqrt(toCenterX*toCenterX + toCenterZ*toCenterZ) || 1;
+            position.x += (toCenterX / toCenterLen) * 2;
+            position.z += (toCenterZ / toCenterLen) * 2;
+        }
+
         // ── Stuck detection & recovery ──
         let moveDist = position.distanceTo(lastPosition);
-        if (moveDist < 0.3) {
+        if (moveDist < 0.2) {
             stuckTimer += dt;
         } else {
             stuckTimer = 0;
@@ -207,9 +224,9 @@ const AIBuggy = (function () {
 
         if (reverseTimer > 0) {
             reverseTimer -= dt;
-            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 3;
+            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 2;
             heading += turn;
-            velocity = -maxSpeed * 0.6;
+            velocity = -maxSpeed * 0.5;
             let forwardX = Math.sin(heading);
             let forwardZ = Math.cos(heading);
             position.x += forwardX * velocity * dt;
@@ -223,8 +240,8 @@ const AIBuggy = (function () {
             return Math.abs(velocity) / maxSpeed;
         }
 
-        if (stuckTimer > 2.0) {
-            reverseTimer = 1.5;
+        if (stuckTimer > 1.5) {
+            reverseTimer = 1.0;
             stuckTimer = 0;
         }
 
@@ -248,26 +265,9 @@ const AIBuggy = (function () {
             }
         }
 
-        // AI steering toward target + obstacle avoidance
+        // Pure gem-seeking steering (obstacle avoidance removed — reactive bounce handles it)
         let throttle = 0;
         let steering = 0;
-        let avoidX = 0;
-        let avoidZ = 0;
-
-        // Obstacle avoidance
-        if (getObstacleData && getObstacleData.length > 0) {
-            for (let obs of getObstacleData) {
-                let dx = position.x - obs.x;
-                let dz = position.z - obs.z;
-                let dist = Math.sqrt(dx*dx + dz*dz);
-                let avoidRadius = obs.radius + BUGGY_RADIUS + 5.0;
-                if (dist < avoidRadius && dist > 0.001) {
-                    let strength = (avoidRadius - dist) / avoidRadius;
-                    avoidX += (dx / dist) * strength * 2.0;
-                    avoidZ += (dz / dist) * strength * 2.0;
-                }
-            }
-        }
 
         if (targetGem) {
             let dx = targetGem.x - position.x;
@@ -275,15 +275,7 @@ const AIBuggy = (function () {
             let dist = Math.sqrt(dx*dx + dz*dz);
             let targetHeading = Math.atan2(dx, dz);
 
-            // Blend target seeking with obstacle avoidance
-            let seekX = Math.sin(targetHeading);
-            let seekZ = Math.cos(targetHeading);
-            let blend = Math.min(1.0, Math.sqrt(avoidX*avoidX + avoidZ*avoidZ));
-            let finalX = seekX * (1 - blend) + avoidX * blend;
-            let finalZ = seekZ * (1 - blend) + avoidZ * blend;
-
-            let finalHeading = Math.atan2(finalX, finalZ);
-            let angleDiff = finalHeading - heading;
+            let angleDiff = targetHeading - heading;
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
@@ -339,7 +331,8 @@ const AIBuggy = (function () {
         position.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.x));
         position.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.z));
 
-        // Obstacle collision
+        // Obstacle collision + reactive re-targeting
+        let collisionThisFrame = false;
         if (getObstacleData && getObstacleData.length > 0) {
             for (let obs of getObstacleData) {
                 let dx = position.x - obs.x;
@@ -350,6 +343,24 @@ const AIBuggy = (function () {
                     position.x += dx * push;
                     position.z += dz * push;
                     velocity *= 0.5;
+                    collisionThisFrame = true;
+                }
+            }
+        }
+
+        // If hit obstacle, pick a different gem target so we don't keep ramming same tree
+        if (collisionThisFrame && targetGem) {
+            let oldTarget = targetGem;
+            targetGem = pickTargetGem();
+            if (targetGem === oldTarget) {
+                const gems = World.getUncollectedGems();
+                if (gems.length > 1) {
+                    for (let g of gems) {
+                        if (g !== oldTarget) {
+                            targetGem = g;
+                            break;
+                        }
+                    }
                 }
             }
         }
