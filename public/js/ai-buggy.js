@@ -321,13 +321,6 @@ const AIBuggy = (function () {
         position.x += forwardX * velocity * dt;
         position.z += forwardZ * velocity * dt;
 
-        // Map boundaries — detect stuck at edge
-        let atEdgeX = position.x <= -MAP_HALF + 3 || position.x >= MAP_HALF - 3;
-        let atEdgeZ = position.z <= -MAP_HALF + 3 || position.z >= MAP_HALF - 3;
-        if (atEdgeX || atEdgeZ) {
-            stuckTimer += dt * 3; // faster stuck detection at edge
-        }
-
         position.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.x));
         position.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.z));
 
