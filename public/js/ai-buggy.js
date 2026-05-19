@@ -213,9 +213,9 @@ const AIBuggy = (function () {
             position.z += (toCenterZ / toCenterLen) * 5;
         }
 
-        // ── Stuck detection & recovery ──
+        // ── Stuck detection & recovery (freeze-and-pivot) ──
         let moveDist = position.distanceTo(lastPosition);
-        if (moveDist < 0.2) {
+        if (moveDist < 0.15) {
             stuckTimer += dt;
         } else {
             stuckTimer = 0;
@@ -224,27 +224,28 @@ const AIBuggy = (function () {
 
         if (reverseTimer > 0) {
             reverseTimer -= dt;
-            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 2;
-            heading += turn;
-            velocity = -maxSpeed * 0.5;
-            let forwardX = Math.sin(heading);
-            let forwardZ = Math.cos(heading);
-            position.x += forwardX * velocity * dt;
-            position.z += forwardZ * velocity * dt;
-            position.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.x));
-            position.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.z));
+            // Freeze in place, pivot toward a new gem target
+            velocity = 0;
+            let newGem = pickTargetGem();
+            if (newGem) {
+                let dx = newGem.x - position.x;
+                let dz = newGem.z - position.z;
+                heading = Math.atan2(dx, dz);
+                targetGem = newGem;
+            } else {
+                // No gems left: spin slowly toward center
+                heading += TURN_SPEED * dt * 2;
+            }
             let groundY = getTerrainHeight(position.x, position.z);
             position.y = groundY + GROUND_CLEARANCE;
             mesh.position.copy(position);
             mesh.rotation.y = heading;
-            return Math.abs(velocity) / maxSpeed;
+            return 0;
         }
 
         if (stuckTimer > 1.5) {
-            reverseTimer = 1.0;
+            reverseTimer = 0.5;  // short freeze-pivot duration
             stuckTimer = 0;
-            // Ensure we come out of reverse going forward
-            velocity = maxSpeed * 0.3;
         }
 
         // Easy mode: idle chance
@@ -282,7 +283,8 @@ const AIBuggy = (function () {
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
             let steerFactor = dist < 6 ? 3.5 : 2.0;
-            steering = Math.max(-1, Math.min(1, angleDiff * steerFactor));
+            // NEGATED: AI steering sign is inverted vs player input mapping
+            steering = -Math.max(-1, Math.min(1, angleDiff * steerFactor));
             throttle = 1.0;
 
             // Slow down to turn sharply when gem is behind us
