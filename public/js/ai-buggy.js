@@ -278,22 +278,27 @@ const AIBuggy = (function () {
             let dist = Math.sqrt(dx*dx + dz*dz);
             let targetHeading = Math.atan2(dx, dz);
 
-            let angleDiff = targetHeading - heading;
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            // When very close, snap heading straight at gem and drive forward — no steering math
+            if (dist < 2.5) {
+                heading = targetHeading;
+                steering = 0;
+                throttle = 0.15;
+            } else {
+                let angleDiff = targetHeading - heading;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-            let steerFactor = dist < 4 ? 5.0 : 2.0;
-            steering = -Math.max(-1, Math.min(1, angleDiff * steerFactor));
-            throttle = 1.0;
+                let steerFactor = dist < 4 ? 5.0 : 2.0;
+                steering = -Math.max(-1, Math.min(1, angleDiff * steerFactor));
+                throttle = 1.0;
 
-            // Slow down to turn sharply when gem is behind us
-            if (Math.abs(angleDiff) > 1.0) {
-                throttle = 0.2;
+                if (Math.abs(angleDiff) > 1.0) {
+                    throttle = 0.2;
+                }
+
+                if (dist < 8) throttle = 0.4;
+                if (dist < 4) throttle = 0.15;
             }
-
-            if (dist < 8) throttle = 0.4;
-            if (dist < 4) throttle = 0.15;
-            if (dist < 2.5) throttle = 0.03;
         } else {
             throttle = 0.3;
             steering = Math.sin(Date.now() * 0.001) * 0.5;
