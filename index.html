@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mountain Kids — Gem Hunt</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen overlay">
+            <h1>Mountain Kids</h1>
+            <p class="subtitle">Gem Hunt</p>
+            <p class="instruction">Press any key to drive</p>
+            <p class="controls-hint">WASD or Arrows to move • Space to brake</p>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="overlay hidden">
+            <div id="timer">60</div>
+            <div id="score-box">
+                <span id="score">0</span><span class="score-total"> / 25</span>
+            </div>
+            <div id="ai-score-box">
+                AI: <span id="ai-score">0</span><span class="score-total"> / 25</span>
+            </div>
+            <div id="difficulty-label">Easy Mode</div>
+            <button id="mute-btn" class="icon-btn" title="Toggle sound">🔊</button>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="win-screen" class="screen overlay hidden">
+            <h2>You found all gems!</h2>
+            <p id="win-score">You collected 0 / 25 gems!</p>
+            <p class="celebration">🎉 Great driving! 🎉</p>
+            <button id="play-again-btn" class="action-btn">Play Again</button>
+        </div>
+
+        <!-- Lose Screen -->
+        <div id="lose-screen" class="screen overlay hidden">
+            <h2>Time's Up!</h2>
+            <p id="lose-score">You collected 0 / 25 gems!</p>
+            <p class="celebration">⏱️ Try again! ⏱️</p>
+            <button id="play-again-btn-lose" class="action-btn">Play Again</button>
+        </div>
+
+        <!-- Touch Controls (mobile) -->
+        <div id="touch-controls" class="overlay hidden">
+            <div id="joystick-zone">
+                <div id="joystick-base"></div>
+                <div id="joystick-knob"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/input.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/buggy.js"></script>
+    <script src="js/ai-buggy.js"></script>
+    <script src="js/engine.js"></script>
+</body>
+</html>
