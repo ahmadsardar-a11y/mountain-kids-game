@@ -14,7 +14,7 @@ const AIBuggy = (function () {
     const BUGGY_RADIUS = 1.2;
     const SPIN_ROTATION_SPEED = 10;
     const GEM_COLLECT_RADIUS = 3.5;
-    const IDLE_CHANCE = 0.2;
+    const IDLE_CHANCE = 0.05;
 
     // ── Stuck detection ──
     let stuckTimer = 0;
@@ -187,8 +187,12 @@ const AIBuggy = (function () {
             return velocity / MAX_SPEED_EASY;
         }
 
-        // Pick target if needed
+        // Pick target if needed (re-pick periodically to avoid chasing unreachable gems)
         if (!targetGem || targetGem.collected) {
+            targetGem = pickTargetGem();
+        }
+        // Re-pick every 5 seconds to avoid stuck chasing one gem
+        if (Math.random() < 0.005) {
             targetGem = pickTargetGem();
         }
 
@@ -203,10 +207,9 @@ const AIBuggy = (function () {
 
         if (reverseTimer > 0) {
             reverseTimer -= dt;
-            // Reverse hard and turn
-            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 2;
+            let turn = (Math.random() > 0.5 ? 1 : -1) * TURN_SPEED * dt * 3;
             heading += turn;
-            velocity = -maxSpeed * 0.5;
+            velocity = -maxSpeed * 0.6;
             let forwardX = Math.sin(heading);
             let forwardZ = Math.cos(heading);
             position.x += forwardX * velocity * dt;
@@ -326,7 +329,13 @@ const AIBuggy = (function () {
         position.x += forwardX * velocity * dt;
         position.z += forwardZ * velocity * dt;
 
-        // Map boundaries
+        // Map boundaries — detect stuck at edge
+        let atEdgeX = position.x <= -MAP_HALF + 3 || position.x >= MAP_HALF - 3;
+        let atEdgeZ = position.z <= -MAP_HALF + 3 || position.z >= MAP_HALF - 3;
+        if (atEdgeX || atEdgeZ) {
+            stuckTimer += dt * 3; // faster stuck detection at edge
+        }
+
         position.x = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.x));
         position.z = Math.max(-MAP_HALF, Math.min(MAP_HALF, position.z));
 

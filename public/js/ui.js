@@ -105,7 +105,15 @@ const UI = (function () {
             document.getElementById('diff-easy').addEventListener('click', () => {
                 selectDifficulty('easy');
             });
+            document.getElementById('diff-easy').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                selectDifficulty('easy');
+            });
             document.getElementById('diff-hard').addEventListener('click', () => {
+                selectDifficulty('hard');
+            });
+            document.getElementById('diff-hard').addEventListener('touchend', (e) => {
+                e.preventDefault();
                 selectDifficulty('hard');
             });
         }

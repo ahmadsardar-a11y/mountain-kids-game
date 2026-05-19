@@ -467,7 +467,7 @@ const World = (function () {
 
             const mesh = new THREE.Mesh(rampGeo, rampMat);
             // Tilt the ramp upward on Z axis
-            const tiltAngle = 0.35 + Math.random() * 0.15;
+            const tiltAngle = 0.55 + Math.random() * 0.15;
             mesh.rotation.x = -tiltAngle;
             mesh.position.set(x, y + 1.2, z);
             rampGroup.add(mesh);
@@ -612,20 +612,33 @@ const World = (function () {
     // ── Ramp collision ──
     function getRampHeight(x, z) {
         let bestHeight = -999;
+        let onRamp = false;
         for (let r of rampData) {
-            // Check if point is within ramp bounds (roughly)
             let dx = x - r.x;
             let dz = z - r.z;
-            let dist = Math.sqrt(dx*dx + dz*dz);
-            if (dist < 6.0) {
-                // Estimate ramp surface height at this position
-                let forwardZ = -Math.cos(r.tiltAngle); // ramp faces -Z when tilted
-                let alongRamp = dz * forwardZ;
-                let rampSurfaceY = r.y + Math.sin(r.tiltAngle) * alongRamp;
+            // Ramp is 6 wide, 12 long, rotated by tiltAngle
+            // Local coordinates: x is width, z is length along ramp
+            let cosT = Math.cos(r.tiltAngle);
+            let sinT = Math.sin(r.tiltAngle);
+            let localZ = dz * cosT - (r.y - getTerrainHeight(r.x, r.z)) * sinT; // approximate
+            let localX = dx;
+            // Check if on ramp surface (length 12, width 6)
+            if (Math.abs(localX) < 3.5 && localZ > -7 && localZ < 5) {
+                let rampSurfaceY = r.y + Math.sin(r.tiltAngle) * localZ;
                 if (rampSurfaceY > bestHeight) bestHeight = rampSurfaceY;
+                onRamp = true;
+            }
+            // Launch zone: just past high end
+            if (Math.abs(localX) < 3.5 && localZ >= 5 && localZ < 9) {
+                // Declining height past ramp end = launch into air
+                let launchY = r.y + Math.sin(r.tiltAngle) * 5 - (localZ - 5) * 0.3;
+                if (launchY > bestHeight) {
+                    bestHeight = launchY;
+                    onRamp = true;
+                }
             }
         }
-        return bestHeight;
+        return onRamp ? bestHeight : -999;
     }
     function init(targetScene) {
         scene = targetScene;

@@ -145,6 +145,7 @@ const Engine = (function () {
             GameAudio.playWin();
         } else if (aiScore > playerScore) {
             result = 'lose';
+            GameAudio.playLose();
         } else {
             result = 'tie';
         }
@@ -219,7 +220,13 @@ const Engine = (function () {
                 let hazard = World.checkHazardCollisions(Buggy.getPosition(), false);
                 if (hazard) {
                     Buggy.triggerSpin();
-                    if (hazard.type === 'bomb') triggerBombFlash();
+                    if (hazard.type === 'bomb') {
+                        triggerBombFlash();
+                        GameAudio.playBomb();
+                    }
+                    if (hazard.type === 'zombie') {
+                        GameAudio.playZombie();
+                    }
                 }
             }
 

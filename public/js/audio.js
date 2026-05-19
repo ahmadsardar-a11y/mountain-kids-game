@@ -101,23 +101,110 @@ const GameAudio = (function () {
         osc2.stop(now + 0.5);
     }
 
-    // ── Win Sound ──
+    // ── Bomb Sound (ticking + explosion) ──
+    function playBomb() {
+        if (!ctx || muted) return;
+        const now = ctx.currentTime;
+        // Ticking: 3 fast beeps
+        for (let i = 0; i < 3; i++) {
+            const g = ctx.createGain();
+            g.connect(masterGain);
+            g.gain.setValueAtTime(0.3, now + i * 0.12);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.08);
+            const osc = ctx.createOscillator();
+            osc.type = 'square';
+            osc.frequency.value = 880;
+            osc.connect(g);
+            osc.start(now + i * 0.12);
+            osc.stop(now + i * 0.12 + 0.08);
+        }
+        // Explosion: noise burst + low boom
+        const noise = ctx.createBufferSource();
+        const bufferSize = ctx.sampleRate * 0.3;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.05));
+        }
+        noise.buffer = buffer;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.4, now + 0.4);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+        noise.connect(noiseGain);
+        noiseGain.connect(masterGain);
+        noise.start(now + 0.4);
+
+        // Low boom
+        const boom = ctx.createOscillator();
+        boom.type = 'sine';
+        boom.frequency.setValueAtTime(120, now + 0.4);
+        boom.frequency.exponentialRampToValueAtTime(30, now + 0.7);
+        const boomGain = ctx.createGain();
+        boomGain.gain.setValueAtTime(0.4, now + 0.4);
+        boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+        boom.connect(boomGain);
+        boomGain.connect(masterGain);
+        boom.start(now + 0.4);
+        boom.stop(now + 0.7);
+    }
+
+    // ── Zombie Hit (Mario bump) ──
+    function playZombie() {
+        if (!ctx || muted) return;
+        const now = ctx.currentTime;
+        const g = ctx.createGain();
+        g.connect(masterGain);
+        g.gain.setValueAtTime(0.3, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        const osc = ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+        osc.connect(g);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    // ── Win Sound (Mario victory fanfare) ──
     function playWin() {
         if (!ctx || muted) return;
         const now = ctx.currentTime;
-        const notes = [523, 659, 784, 1047];
+        const notes = [
+            { freq: 523, duration: 0.15 },
+            { freq: 659, duration: 0.15 },
+            { freq: 784, duration: 0.15 },
+            { freq: 1047, duration: 0.4 }
+        ];
+        notes.forEach((note, i) => {
+            const g = ctx.createGain();
+            g.connect(masterGain);
+            g.gain.setValueAtTime(0.25, now + i * 0.18);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + note.duration);
+            const osc = ctx.createOscillator();
+            osc.type = 'square';
+            osc.frequency.value = note.freq;
+            osc.connect(g);
+            osc.start(now + i * 0.18);
+            osc.stop(now + i * 0.18 + note.duration);
+        });
+    }
+
+    // ── Lose Sound (Mario death descending) ──
+    function playLose() {
+        if (!ctx || muted) return;
+        const now = ctx.currentTime;
+        const notes = [880, 830, 784, 740, 698, 659, 622, 587, 554, 523];
         notes.forEach((freq, i) => {
             const g = ctx.createGain();
             g.connect(masterGain);
-            g.gain.setValueAtTime(0.2, now + i * 0.15);
-            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
-
+            g.gain.setValueAtTime(0.2, now + i * 0.08);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.12);
             const osc = ctx.createOscillator();
-            osc.type = 'sine';
+            osc.type = 'square';
             osc.frequency.value = freq;
             osc.connect(g);
-            osc.start(now + i * 0.15);
-            osc.stop(now + i * 0.15 + 0.4);
+            osc.start(now + i * 0.08);
+            osc.stop(now + i * 0.08 + 0.12);
         });
     }
 
@@ -138,7 +225,10 @@ const GameAudio = (function () {
         stopEngine,
         updateEngine,
         playCollect,
+        playBomb,
+        playZombie,
         playWin,
+        playLose,
         setMute,
         isMuted
     };
