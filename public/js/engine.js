@@ -241,8 +241,8 @@ const Engine = (function () {
                 }
             }
 
-            // AI Buggy update
-            let aiSpeed = AIBuggy.update(dt, World.getTerrainHeight, World.getObstacleData());
+            // AI Buggy update (pass null obstacle data so AI drives through trees/rocks)
+            let aiSpeed = AIBuggy.update(dt, World.getTerrainHeight, null);
             
             // AI hazard collisions
             if (!AIBuggy.isSpinning()) {
