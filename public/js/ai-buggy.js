@@ -282,19 +282,18 @@ const AIBuggy = (function () {
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-            let steerFactor = dist < 6 ? 3.5 : 2.0;
-            // NEGATED: AI steering sign is inverted vs player input mapping
+            let steerFactor = dist < 4 ? 5.0 : 2.0;
             steering = -Math.max(-1, Math.min(1, angleDiff * steerFactor));
             throttle = 1.0;
 
             // Slow down to turn sharply when gem is behind us
             if (Math.abs(angleDiff) > 1.0) {
-                throttle = 0.2;  // crawl while doing big turns
+                throttle = 0.2;
             }
 
-            if (dist < 8) throttle = 0.6;
-            if (dist < 4) throttle = 0.3;
-            if (dist < 2.5) throttle = 0.15;
+            if (dist < 8) throttle = 0.4;
+            if (dist < 4) throttle = 0.15;
+            if (dist < 2.5) throttle = 0.03;
         } else {
             throttle = 0.3;
             steering = Math.sin(Date.now() * 0.001) * 0.5;
