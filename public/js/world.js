@@ -810,7 +810,7 @@ const World = (function () {
         }
     }
 
-    function checkGemCollection(buggyPosition) {
+    function checkGemCollection(buggyPosition, isAI) {
         let collectedIndex = -1;
         for (let i = 0; i < gemData.length; i++) {
             let g = gemData[i];
@@ -820,6 +820,7 @@ const World = (function () {
             let dist = Math.sqrt(dx * dx + dz * dz);
             if (dist < GEM_COLLECT_RADIUS) {
                 g.collected = true;
+                g.collectedBy = isAI ? 'ai' : 'player';
                 collectedIndex = i;
 
                 const dummy = new THREE.Object3D();
@@ -885,6 +886,14 @@ const World = (function () {
         return gemData.filter(g => g.collected).length;
     }
 
+    function getPlayerCollectedCount() {
+        return gemData.filter(g => g.collectedBy === 'player').length;
+    }
+
+    function getAICollectedCount() {
+        return gemData.filter(g => g.collectedBy === 'ai').length;
+    }
+
     function getTotalGems() {
         return GEM_COUNT;
     }
@@ -903,6 +912,7 @@ const World = (function () {
             gemData[i].y = pos.y;
             gemData[i].z = pos.z;
             gemData[i].collected = false;
+            gemData[i].collectedBy = null;
 
             dummy.position.set(pos.x, pos.y, pos.z);
             dummy.rotation.set(0, Math.random() * Math.PI, 0);
@@ -920,6 +930,7 @@ const World = (function () {
             gemData[idx].y = pos.y;
             gemData[idx].z = pos.z;
             gemData[idx].collected = false;
+            gemData[idx].collectedBy = null;
 
             dummy.position.set(pos.x, pos.y, pos.z);
             dummy.rotation.set(0, Math.random() * Math.PI, 0);
@@ -999,6 +1010,8 @@ const World = (function () {
         checkGemCollection,
         checkHazardCollisions,
         getCollectedCount,
+        getPlayerCollectedCount,
+        getAICollectedCount,
         getTotalGems,
         getUncollectedGems,
         getBoulderData,

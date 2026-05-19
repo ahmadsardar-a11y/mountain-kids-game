@@ -137,7 +137,8 @@ const Engine = (function () {
         state = STATES.GAME_OVER;
         timerActive = false;
         GameAudio.stopEngine();
-        playerScore = World.getCollectedCount();
+        playerScore = World.getPlayerCollectedCount();
+        aiScore = World.getAICollectedCount();
         
         let result = '';
         if (playerScore > aiScore) {
@@ -232,10 +233,10 @@ const Engine = (function () {
 
             // Player gem collection
             if (!Buggy.isSpinning()) {
-                let collected = World.checkGemCollection(Buggy.getPosition());
+                let collected = World.checkGemCollection(Buggy.getPosition(), false);
                 if (collected !== -1) {
                     GameAudio.playCollect();
-                    UI.setScore(World.getCollectedCount());
+                    UI.setScore(World.getPlayerCollectedCount());
                     triggerGemFlash();
                 }
             }
@@ -253,10 +254,9 @@ const Engine = (function () {
 
             // AI gem collection
             if (!AIBuggy.isSpinning()) {
-                let aiCollected = World.checkGemCollection(AIBuggy.getPosition());
+                let aiCollected = World.checkGemCollection(AIBuggy.getPosition(), true);
                 if (aiCollected !== -1) {
-                    aiScore++;
-                    UI.setAIScore(aiScore);
+                    UI.setAIScore(World.getAICollectedCount());
                 }
             }
 
