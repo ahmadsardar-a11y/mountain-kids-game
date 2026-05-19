@@ -195,7 +195,7 @@ html, body {
 #touch-controls {
     display: flex;
     align-items: flex-end;
-    justify-content: flex-start;
+    justify-content: flex-end;
     padding: 1rem;
 }
 
@@ -230,7 +230,7 @@ html, body {
     transition: none;
 }
 
-/* ── Bot Score (right side) ── */
+/* ── Bot Score (below player score) ── */
 #ai-score-box {
     background: rgba(200, 0, 0, 0.4);
     border-radius: 0.75rem;
@@ -240,8 +240,10 @@ html, body {
     font-weight: 700;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
     position: absolute;
-    top: 1rem;
-    right: 4rem;
+    top: 3.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
 }
 
 /* ── Difficulty Label (hidden during gameplay) ── */

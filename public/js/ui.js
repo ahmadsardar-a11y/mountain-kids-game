@@ -196,6 +196,11 @@ const UI = (function () {
             hide(resultScreen);
             if (onRestart) onRestart();
         });
+        document.getElementById('play-again-result').addEventListener('touchend', function (e) {
+            e.preventDefault();
+            hide(resultScreen);
+            if (onRestart) onRestart();
+        });
 
         show(resultScreen);
     }
