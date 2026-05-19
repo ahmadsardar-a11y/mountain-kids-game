@@ -199,18 +199,18 @@ const AIBuggy = (function () {
         // ── Edge-of-map recovery ──
         let atEdgeX = position.x <= -MAP_HALF + 2 || position.x >= MAP_HALF - 2;
         let atEdgeZ = position.z <= -MAP_HALF + 2 || position.z >= MAP_HALF - 2;
-        if ((atEdgeX || atEdgeZ) && Math.abs(velocity) < 3) {
+        if (atEdgeX || atEdgeZ) {
             // Point directly toward map center and boost forward
             heading = Math.atan2(-position.x, -position.z);
-            velocity = maxSpeed * 0.8;
+            velocity = maxSpeed * 0.6;
             stuckTimer = 0;
             reverseTimer = 0;
-            // Give it breathing room: temporarily push 2 units inward
+            // Give it breathing room: push 5 units inward
             let toCenterX = -position.x;
             let toCenterZ = -position.z;
             let toCenterLen = Math.sqrt(toCenterX*toCenterX + toCenterZ*toCenterZ) || 1;
-            position.x += (toCenterX / toCenterLen) * 2;
-            position.z += (toCenterZ / toCenterLen) * 2;
+            position.x += (toCenterX / toCenterLen) * 5;
+            position.z += (toCenterZ / toCenterLen) * 5;
         }
 
         // ── Stuck detection & recovery ──
@@ -243,6 +243,8 @@ const AIBuggy = (function () {
         if (stuckTimer > 1.5) {
             reverseTimer = 1.0;
             stuckTimer = 0;
+            // Ensure we come out of reverse going forward
+            velocity = maxSpeed * 0.3;
         }
 
         // Easy mode: idle chance
@@ -283,6 +285,11 @@ const AIBuggy = (function () {
             steering = Math.max(-1, Math.min(1, angleDiff * steerFactor));
             throttle = 1.0;
 
+            // Slow down to turn sharply when gem is behind us
+            if (Math.abs(angleDiff) > 1.0) {
+                throttle = 0.2;  // crawl while doing big turns
+            }
+
             if (dist < 8) throttle = 0.6;
             if (dist < 4) throttle = 0.3;
             if (dist < 2.5) throttle = 0.15;
@@ -308,10 +315,9 @@ const AIBuggy = (function () {
             else velocity -= Math.sign(velocity) * decel;
         }
 
-        // Steering (only when moving)
+        // Steering (AI can turn normally even when reversing)
         if (Math.abs(velocity) > 0.1) {
             let turn = -steering * TURN_SPEED * dt;
-            if (velocity < 0) turn *= -0.8;
             heading += turn;
         }
 

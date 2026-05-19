@@ -125,6 +125,8 @@ const UI = (function () {
         if (onDifficultySelect) onDifficultySelect(diff);
         const diffScreen = document.getElementById('difficulty-screen');
         if (diffScreen) hide(diffScreen);
+        // Auto-start the game after difficulty pick (fixes mobile where no keyboard exists)
+        if (onStart) onStart();
     }
 
     function showPlaying() {
