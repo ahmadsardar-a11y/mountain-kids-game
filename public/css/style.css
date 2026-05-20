@@ -195,8 +195,9 @@ html, body {
 #touch-controls {
     display: flex;
     align-items: flex-end;
-    justify-content: flex-end;
+    justify-content: center;
     padding: 1rem;
+    padding-bottom: 2rem;
 }
 
 #joystick-zone {

@@ -55,7 +55,7 @@ const Engine = (function () {
         );
 
         // World
-        World.init(scene);
+        World.init(scene, difficulty);
 
         // Buggy
         Buggy.init(scene, camera, World.getTerrainHeight);
@@ -123,7 +123,7 @@ const Engine = (function () {
         aiScore = 0;
         playerScore = 0;
         UI.setTimer(Math.ceil(timeRemaining));
-        World.reset();
+        World.reset(difficulty);
         Buggy.reset(World.getTerrainHeight);
         AIBuggy.reset(World.getTerrainHeight, difficulty);
         Input.resetInteraction();

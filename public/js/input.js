@@ -30,8 +30,10 @@ const Input = (function () {
 
     // ── Touch Joystick ──
     const JOYSTICK_MAX_RADIUS = 40;
+    const JOYSTICK_DEADZONE = 0.15; // 15% deadzone for mobile
     let joystickCenter = { x: 0, y: 0 };
     let joystickDragging = false;
+    let smoothedTouchInput = { x: 0, y: 0 }; // for steering smoothing
 
     function initJoystick() {
         const zone = document.getElementById('joystick-zone');
@@ -54,8 +56,18 @@ const Input = (function () {
             const nx = Math.cos(angle) * clamped;
             const ny = Math.sin(angle) * clamped;
             knob.style.transform = `translate(${nx}px, ${ny}px)`;
-            touchInput.x = nx / JOYSTICK_MAX_RADIUS;
-            touchInput.y = ny / JOYSTICK_MAX_RADIUS;
+
+            // Raw normalized input (-1 to 1)
+            let rawX = nx / JOYSTICK_MAX_RADIUS;
+            let rawY = ny / JOYSTICK_MAX_RADIUS;
+
+            // Apply deadzone
+            let deadX = Math.abs(rawX) < JOYSTICK_DEADZONE ? 0 : (rawX - Math.sign(rawX) * JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
+            let deadY = Math.abs(rawY) < JOYSTICK_DEADZONE ? 0 : (rawY - Math.sign(rawY) * JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
+
+            // Apply exponential curve for finer control near center
+            touchInput.x = Math.sign(deadX) * Math.pow(Math.abs(deadX), 1.4);
+            touchInput.y = Math.sign(deadY) * Math.pow(Math.abs(deadY), 1.4);
         }
 
         function start(e) {
@@ -112,7 +124,11 @@ const Input = (function () {
         let s = 0;
         if (pressed.has(KEYS.A) || pressed.has(KEYS.LEFT)) s -= 1;
         if (pressed.has(KEYS.D) || pressed.has(KEYS.RIGHT)) s += 1;
-        if (touchActive) s += touchInput.x;
+        if (touchActive) {
+            // Smooth steering ramp (5-frame lerp for mobile)
+            smoothedTouchInput.x += (touchInput.x - smoothedTouchInput.x) * 0.2;
+            s += smoothedTouchInput.x;
+        }
         return Math.max(-1, Math.min(1, s));
     }
 
@@ -130,6 +146,8 @@ const Input = (function () {
         touchActive = false;
         touchInput.x = 0;
         touchInput.y = 0;
+        smoothedTouchInput.x = 0;
+        smoothedTouchInput.y = 0;
     }
 
     return { init, getThrottle, getSteering, isBraking, hasInteracted, resetInteraction };

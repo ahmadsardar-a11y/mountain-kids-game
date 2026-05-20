@@ -7,11 +7,12 @@ const World = (function () {
     const MAP_SIZE = 200;
     const TERRAIN_SEGMENTS = 64;
     const GEM_COUNT = 25;
-    const TREE_COUNT = 45;
-    const ROCK_COUNT = 12;
-    const ZOMBIE_COUNT = 6;
-    const BOMB_COUNT = 8;
-    const LAVA_COUNT = 5;
+    let TREE_COUNT = 45;
+    let ROCK_COUNT = 12;
+    let BOULDER_COUNT = 10;
+    let ZOMBIE_COUNT = 6;
+    let BOMB_COUNT = 8;
+    let LAVA_COUNT = 5;
     const GEM_COLLECT_RADIUS = 3.5;
     const GEM_MIN_SPACING = 12;
     const BOMB_TRIGGER_RADIUS = 3.5;
@@ -20,6 +21,26 @@ const World = (function () {
     const SPIN_DURATION = 3.0;
     const RAMP_COUNT = 3;
     const RAMP_GEM_COUNT = 3;
+    let currentDifficulty = 'hard';
+
+    function setDifficultyCounts(diff) {
+        currentDifficulty = diff || 'hard';
+        if (currentDifficulty === 'easy') {
+            TREE_COUNT = 25;
+            ROCK_COUNT = 6;
+            BOULDER_COUNT = 5;
+            ZOMBIE_COUNT = 3;
+            BOMB_COUNT = 4;
+            LAVA_COUNT = 2;
+        } else {
+            TREE_COUNT = 45;
+            ROCK_COUNT = 12;
+            BOULDER_COUNT = 10;
+            ZOMBIE_COUNT = 6;
+            BOMB_COUNT = 8;
+            LAVA_COUNT = 5;
+        }
+    }
 
     // ── State ──
     let scene = null;
@@ -558,7 +579,6 @@ const World = (function () {
 
         boulderData = [];
         const boulderPositions = [];
-        const BOULDER_COUNT = 10;
         for (let i = 0; i < BOULDER_COUNT; i++) {
             let x = (Math.random() - 0.5) * MAP_SIZE * 0.85;
             let z = (Math.random() - 0.5) * MAP_SIZE * 0.85;
@@ -640,7 +660,8 @@ const World = (function () {
         }
         return onRamp ? bestHeight : -999;
     }
-    function init(targetScene) {
+    function init(targetScene, diff) {
+        setDifficultyCounts(diff);
         scene = targetScene;
         scene.fog = createFog();
 
@@ -902,7 +923,11 @@ const World = (function () {
         return gemData.filter(g => !g.collected);
     }
 
-    function reset() {
+    function reset(diff) {
+        const diffChanged = diff && diff !== currentDifficulty;
+        if (diffChanged) {
+            setDifficultyCounts(diff);
+        }
         // Regenerate gem positions
         const dummy = new THREE.Object3D();
         const positions = generateGemPositions();
@@ -952,6 +977,13 @@ const World = (function () {
                 glowMesh.setMatrixAt(i, glowDummy.matrix);
             }
             glowMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        // Rebuild props if difficulty changed
+        if (diffChanged) {
+            if (propsGroup) scene.remove(propsGroup);
+            propsGroup = createProps();
+            scene.add(propsGroup);
         }
 
         // Reset zombies

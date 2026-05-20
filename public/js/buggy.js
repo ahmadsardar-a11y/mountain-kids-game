@@ -4,12 +4,13 @@
 
 const Buggy = (function () {
     // ── Constants ──
-    const MAX_SPEED = 28;
-    const REVERSE_SPEED = 12;
+    const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const MAX_SPEED = IS_TOUCH ? 20 : 28;
+    const REVERSE_SPEED = IS_TOUCH ? 8 : 12;
     const ACCELERATION = 18;
     const DECELERATION = 10;
     const BRAKE_FORCE = 30;
-    const TURN_SPEED = 2.8;
+    const TURN_SPEED = IS_TOUCH ? 1.8 : 2.8;
     const GROUND_CLEARANCE = 0.8;
     const CAMERA_OFFSET = new THREE.Vector3(0, 6, -10);
     const CAMERA_LERP = 0.12;
